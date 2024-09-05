@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertitore HTML a PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .btn-select {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .throbber {
+            display: none; /* Nascondi di default */
+            border: 4px solid #f3f3f3; /* Colore di fondo */
+            border-top: 4px solid #3498db; /* Colore dell'indicatore */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite; /* Animazione di rotazione */
+            margin-top: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Convertitore da HTML a PDF</h1>
+    <button class="btn-select" id="btn-select">Seleziona File HTML</button>
+    <div class="throbber" id="throbber"></div> <!-- Throbber per indicare il caricamento -->
+    <script src="renderer.js"></script>
+</body>
+</html>
