@@ -11,13 +11,12 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'renderer.js'), // Preload script per il renderer
-      contextIsolation: false,  // Permette l'uso di Node.js nel renderer
-      nodeIntegration: true,    // Necessario per ipcRenderer e altre funzionalità
+      preload: path.join(__dirname, 'renderer.js'),
+      contextIsolation: false,
+      nodeIntegration: true,
     },
   });
 
-  // Abilita il modulo remoto
   remoteMain.enable(win.webContents);
 
   win.loadFile('index.html');
@@ -29,17 +28,20 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Gestisce la richiesta di generazione del PDF dal renderer
 ipcMain.handle('convert-html-to-pdf', async (event, filePath) => {
   try {
+    // Estrai il nome del file senza estensione
+    const defaultFileName = path.basename(filePath, path.extname(filePath)) + '.pdf';
+
+    // Mostra la finestra di dialogo per il salvataggio del PDF
     const { canceled, filePath: savePath } = await dialog.showSaveDialog({
       title: 'Salva il PDF generato',
-      defaultPath: path.join(app.getPath('documents'), 'output.pdf'),
+      defaultPath: path.join(app.getPath('documents'), defaultFileName), // Imposta il nome di default basato sul file di input
       filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
     });
 
     if (canceled) {
-      return;
+      return;  // Se l'utente ha annullato l'operazione, esci
     }
 
     const browser = await puppeteer.launch();
@@ -48,23 +50,24 @@ ipcMain.handle('convert-html-to-pdf', async (event, filePath) => {
 
     await page.goto(fileUrl, { waitUntil: 'networkidle0' });
 
-    // Calcola l'altezza totale del contenuto
+    // Imposta la dimensione della viewport per adattarsi al contenuto
     const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
-    const heightInMm = bodyHeight * 0.264583;
 
-    // Genera il PDF con l'altezza totale calcolata
+    // Genera il PDF con un'unica pagina
     await page.pdf({
-      path: savePath,
-      width: '210mm',
-      height: `${heightInMm}mm`, // Usa altezza dinamica
-      printBackground: true,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+      path: savePath,  // Usa il percorso scelto dall'utente
+      printBackground: true,  // Stampa gli sfondi
+      width: '794px',  // Larghezza fissa, cambia se necessario
+      height: `${bodyHeight}px`,  // Altezza dinamica basata sul contenuto
+      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },  // Margini minimi
+      preferCSSPageSize: false,  // Non utilizzare le dimensioni predefinite della pagina CSS
     });
 
     await browser.close();
-    return savePath;
+    return savePath;  // Restituisci il percorso del file salvato
   } catch (error) {
     console.error('Errore durante la conversione:', error);
     throw error;
   }
 });
+
