@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const remoteMain = require('@electron/remote/main');
+const fs = require('fs');
 
 // Inizializza @electron/remote
 remoteMain.initialize();
@@ -36,7 +37,7 @@ ipcMain.handle('convert-html-to-pdf', async (event, filePath) => {
     // Mostra la finestra di dialogo per il salvataggio del PDF
     const { canceled, filePath: savePath } = await dialog.showSaveDialog({
       title: 'Salva il PDF generato',
-      defaultPath: path.join(app.getPath('documents'), defaultFileName),
+      defaultPath: path.join(app.getPath('documents'), defaultFileName), // Imposta il nome di default basato sul file di input
       filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
     });
 
@@ -49,60 +50,18 @@ ipcMain.handle('convert-html-to-pdf', async (event, filePath) => {
     const fileUrl = `file://${filePath}`;
 
     await page.goto(fileUrl, { waitUntil: 'networkidle0' });
+    
+    // Imposta la dimensione della viewport per adattarsi al contenuto
+    const bodyHeight = await page.evaluate(() => document.body.scrollHeight) - 1;
 
-
-    // Imposta la larghezza della viewport
-    await page.setViewport({
-      width: 794,
-      height: 600,
-    });
-
-    // Calcola le dimensioni effettive del contenuto
-    const dimensions = await page.evaluate(() => {
-      const body = document.body;
-      const html = document.documentElement;
-
-      const width = Math.max(
-        body.scrollWidth, body.offsetWidth,
-        html.clientWidth, html.scrollWidth, html.offsetWidth
-      );
-
-      const height = Math.max(
-        body.scrollHeight, body.offsetHeight,
-        html.clientHeight, html.scrollHeight, html.offsetHeight
-      );
-
-      return { width, height };
-    });
-
-    console.log('Dimensioni del contenuto:', dimensions);
-
-    // Imposta la viewport all'altezza del contenuto
-    await page.setViewport({
-      width: dimensions.width,
-      height: dimensions.height,
-    });
-
-    // Genera il PDF utilizzando l'opzione 'clip'
+    // Genera il PDF con un'unica pagina
     await page.pdf({
-      path: savePath,
-      printBackground: true,
-      margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
-      },
-      width: `${dimensions.width}px`,
-      height: `${dimensions.height}px`,
-      pageRanges: '1',
-      preferCSSPageSize: false,
-      clip: {
-        x: 0,
-        y: 0,
-        width: dimensions.width,
-        height: dimensions.height,
-      },
+      path: savePath,  // Usa il percorso scelto dall'utente
+      printBackground: true,  // Stampa gli sfondi
+      width: '794px',  // Larghezza fissa, cambia se necessario
+      height: `${bodyHeight}px`,  // Altezza dinamica basata sul contenuto
+      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },  // Margini minimi
+      preferCSSPageSize: false,  // Non utilizzare le dimensioni predefinite della pagina CSS
     });
 
     await browser.close();
